@@ -8,6 +8,7 @@ dependencies = []
 
 [project.scripts]
 install-just = "uvx_utils.install_just:main"
+setup-gitignore = "uvx_utils.setup_gitignore:main"
 
 [build-system]
 requires = ["hatchling"]

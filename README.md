@@ -27,3 +27,20 @@ Install a specific release tag:
 ```sh
 uvx --from git+https://github.com/mattfeng/utils install-just --version 1.55.1
 ```
+
+## Set up .gitignore
+
+Select templates from [`github/gitignore`](https://github.com/github/gitignore) and
+write a generated block to `.gitignore` while preserving manual edits outside that
+block:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils setup-gitignore
+```
+
+The TUI starts with common templates: macOS, Python, and Linux. Choose
+`More templates...` or press `a` to browse the comprehensive list.
+
+The selected templates are remembered in `.gitignore-templates.json` and are
+preselected the next time you run the command. Manual `.gitignore` edits outside
+the generated block are preserved every time.
