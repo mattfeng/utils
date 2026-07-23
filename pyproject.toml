@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.scripts]
+install-jj = "uvx_utils.install_jj:main"
 install-just = "uvx_utils.install_just:main"
 setup-gitignore = "uvx_utils.setup_gitignore:main"
 
