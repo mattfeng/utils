@@ -1,6 +1,6 @@
 [project]
 name = "mattfeng-utils"
-version = "0.1.0"
+version = "0.2.0"
 description = "Small uvx-installable utility CLIs."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -10,6 +10,7 @@ dependencies = []
 install-jj = "uvx_utils.install_jj:main"
 install-just = "uvx_utils.install_just:main"
 setup-gitignore = "uvx_utils.setup_gitignore:main"
+setup-compose = "uvx_utils.setup_compose:main"
 
 [build-system]
 requires = ["hatchling"]

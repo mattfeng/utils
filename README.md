@@ -2,9 +2,56 @@
 
 Small stdlib-only utility CLIs designed to run directly with `uvx`.
 
+## Set up Docker Compose backend services
+
+Interactively generate a `compose.yaml` for PostgreSQL, MongoDB, or both:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils setup-compose
+```
+
+Both services are preselected. The prompts let you change each image, host port,
+database, username, and password. Leaving a password blank generates a secure
+32-character value.
+
+The generated stack includes:
+
+- PostgreSQL 18 Alpine and MongoDB 8.0 defaults
+- named volumes for persistent data
+- container health checks and `unless-stopped` restart policies
+- ports bound to `127.0.0.1` by default
+- credentials in `.env.compose`, written with file mode `0600`
+
+Add `.env.compose` to your project's `.gitignore`, then start the services:
+
+```sh
+docker compose up -d
+```
+
+The credentials initialize new database volumes. Changing the environment file
+later does not update users or passwords inside an already initialized volume.
+
+Choose other output locations:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils setup-compose \
+  --output docker/compose.yaml \
+  --env-file docker/.env.compose
+```
+
+Preview the generated Compose and environment files without writing either one:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils setup-compose --dry-run
+```
+
+Existing files require confirmation before replacement. Pass `--force` to replace
+them without a confirmation prompt.
+
 ## Install latest just
 
-Install the latest release of [`casey/just`](https://github.com/casey/just) on Ubuntu/Linux:
+Install the latest release of [`casey/just`](https://github.com/casey/just) on
+Ubuntu/Linux:
 
 ```sh
 uvx --from git+https://github.com/mattfeng/utils install-just
