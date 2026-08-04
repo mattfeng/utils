@@ -2,6 +2,37 @@
 
 Small stdlib-only utility CLIs designed to run directly with `uvx`.
 
+## Install an Oh My Zsh plugin
+
+Choose a plugin from this repository's `zsh-plugins` directory in an interactive
+terminal UI and copy it into your Oh My Zsh custom plugins directory:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils install-zsh-plugin
+```
+
+Use the arrow keys (or `j`/`k`) to select a plugin and Enter to install it. The
+destination defaults to `$ZSH_CUSTOM/plugins`, or
+`~/.oh-my-zsh/custom/plugins` when `ZSH_CUSTOM` is unset. The installer prints
+the line to add to `~/.zshrc`; plugin-specific configuration remains documented
+in [`zsh-plugins/README.md`](zsh-plugins/README.md).
+
+Choose a different Oh My Zsh custom directory:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils install-zsh-plugin \
+  --custom-dir ~/.config/oh-my-zsh/custom
+```
+
+Preview the source and destination without writing files:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils install-zsh-plugin --dry-run
+```
+
+Existing plugin directories are not changed by default. Pass `--force` to
+replace the selected plugin with the bundled version.
+
 ## Set up Docker Compose backend services
 
 Interactively generate a `compose.yaml` for PostgreSQL, MongoDB, or both:
