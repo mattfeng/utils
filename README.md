@@ -2,6 +2,42 @@
 
 Small stdlib-only utility CLIs designed to run directly with `uvx`.
 
+## Install custom Emmet snippets
+
+Install the table snippets into `~/.config/emmet/snippets.json`:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils install-emmet-snippets
+```
+
+The installer does not replace a different existing `snippets.json` by default.
+Inspect and back up that file if needed, then pass `--force` to replace it. To
+preview the destination and generated JSON without writing anything, use
+`--dry-run`.
+
+In VS Code, open the Command Palette, run **Preferences: Open User Settings
+(JSON)**, and add these settings to the top-level settings object:
+
+```jsonc
+{
+  "emmet.extensionsPath": [
+    "/home/mattfeng/.config/emmet"
+  ],
+  "emmet.includeLanguages": {
+    "mdx": "javascriptreact"
+  },
+  "emmet.triggerExpansionOnTab": true
+}
+```
+
+If your home directory is not `/home/mattfeng`, replace that path with the
+absolute path printed by the installer. Reload the VS Code window after changing
+the setting. In an HTML file, type `tbl2`, `tbl3`, `tbl4`, or `tblh` and press
+Tab to expand the snippet. The `emmet.includeLanguages` mapping also enables
+Emmet's JavaScript React behavior in MDX files. See the
+[VS Code Emmet documentation](https://code.visualstudio.com/docs/languages/emmet)
+for more about custom snippets and language mappings.
+
 ## Install an Oh My Zsh plugin
 
 Choose a plugin from this repository's `zsh-plugins` directory in an interactive
