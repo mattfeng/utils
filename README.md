@@ -69,6 +69,35 @@ uvx --from git+https://github.com/mattfeng/utils install-zsh-plugin --dry-run
 Existing plugin directories are not changed by default. Pass `--force` to
 replace the selected plugin with the bundled version.
 
+## Set up devcontainer config files
+
+Install an opinionated Vim config and Oh My Pi config into the current user's
+home directory:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils setup-devcontainer-configs
+```
+
+The command writes `~/.vimrc`, which copies yanked text to the host clipboard
+with OSC 52, and `~/.omp/agent/config.yml`, which configures the preferred Oh My
+Pi models, theme, status line, and Codex web search provider. The terminal used
+to connect to the devcontainer must permit OSC 52 clipboard writes.
+
+Each file uses a clearly marked `mattfeng-utils devcontainer config` block.
+Existing content outside that block is preserved, so either file can contain
+additional personal configuration. If a file has incomplete or duplicate
+markers, the command stops without changing either file.
+
+Preview the complete resulting files without writing them:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils \
+  setup-devcontainer-configs --dry-run
+```
+
+Use `--vim-config` or `--omp-config` to choose a different destination for
+either file.
+
 ## Set up Docker Compose backend services
 
 Interactively generate a `compose.yaml` for PostgreSQL, MongoDB, or both:

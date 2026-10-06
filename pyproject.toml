@@ -11,6 +11,7 @@ install-emmet-snippets = "uvx_utils.install_emmet_snippets:main"
 install-jj = "uvx_utils.install_jj:main"
 install-just = "uvx_utils.install_just:main"
 install-zsh-plugin = "uvx_utils.install_zsh_plugin:main"
+setup-devcontainer-configs = "uvx_utils.setup_devcontainer_configs:main"
 setup-gitignore = "uvx_utils.setup_gitignore:main"
 setup-compose = "uvx_utils.setup_compose:main"
 
