@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import curses
 import os
 import stat
 import sys
@@ -12,6 +13,7 @@ from pathlib import Path
 
 DEFAULT_VIM_CONFIG = Path("~/.vimrc")
 DEFAULT_OMP_CONFIG = Path("~/.omp/agent/config.yml")
+DEFAULT_OMP_KEYBINDINGS = Path("~/.omp/agent/keybindings.yml")
 MARKER_TEXT = "mattfeng-utils devcontainer config"
 
 VIM_CONFIG = r'''" Copy yanked text to the host clipboard with OSC 52.
@@ -93,6 +95,11 @@ startup:
   checkUpdate: false
 """
 
+OMP_KEYBINDINGS = """\
+app.model.selectTemporary: []
+app.model.cycleForward: Alt+P
+"""
+
 
 @dataclass(frozen=True)
 class ConfigFile:
@@ -119,6 +126,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     except SetupError as error:
         print(f"error: {error}", file=sys.stderr)
         return 1
+    except KeyboardInterrupt:
+        print("cancelled", file=sys.stderr)
+        return 130
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -139,9 +149,23 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Oh My Pi configuration file. Defaults to {DEFAULT_OMP_CONFIG}.",
     )
     parser.add_argument(
+        "--omp-keybindings",
+        type=Path,
+        default=DEFAULT_OMP_KEYBINDINGS,
+        help=(
+            "Oh My Pi keybindings file. "
+            f"Defaults to {DEFAULT_OMP_KEYBINDINGS}."
+        ),
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Select all config files without opening the interactive selector.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print destinations and config content without writing files.",
+        help="Print selected destinations and content without writing files.",
     )
     return parser
 
@@ -150,17 +174,28 @@ def setup_devcontainer_configs(args: argparse.Namespace) -> int:
     configs = [
         ConfigFile("Vim", args.vim_config.expanduser(), VIM_CONFIG, '"'),
         ConfigFile("Oh My Pi", args.omp_config.expanduser(), OMP_CONFIG, "#"),
+        ConfigFile(
+            "Oh My Pi keybindings",
+            args.omp_keybindings.expanduser(),
+            OMP_KEYBINDINGS,
+            "#",
+        ),
     ]
     ensure_distinct_destinations(configs)
     rendered = [render_config(config) for config in configs]
+    selected = rendered if args.all else run_config_tui(rendered)
 
-    if args.dry_run:
-        print_configs(rendered)
+    if not selected:
+        print("no config files selected")
         return 0
 
-    pending = [config for config in rendered if config.changed]
+    if args.dry_run:
+        print_configs(selected)
+        return 0
+
+    pending = [config for config in selected if config.changed]
     if not pending:
-        print("devcontainer config files are already installed")
+        print("selected config files are already up to date")
         return 0
 
     for config in pending:
@@ -172,7 +207,7 @@ def setup_devcontainer_configs(args: argparse.Namespace) -> int:
 def ensure_distinct_destinations(configs: list[ConfigFile]) -> None:
     destinations = [config.destination.resolve() for config in configs]
     if len(destinations) != len(set(destinations)):
-        raise SetupError("Vim and Oh My Pi configs must use different destinations")
+        raise SetupError("managed configs must use different destinations")
 
 
 @dataclass(frozen=True)
@@ -180,6 +215,7 @@ class RenderedConfig:
     spec: ConfigFile
     rendered_content: str
     changed: bool
+    state: str
 
 
 def render_config(config: ConfigFile) -> RenderedConfig:
@@ -188,15 +224,30 @@ def render_config(config: ConfigFile) -> RenderedConfig:
         f"{config.begin_marker}\n{config.content.rstrip()}\n{config.end_marker}\n"
     )
 
-    if existing is None or not existing:
+    if existing is None:
         rendered = managed_block
+        state = "new file"
+    elif not existing:
+        rendered = managed_block
+        state = "add block"
     else:
-        rendered = replace_or_append_block(existing, config, managed_block)
+        rendered, replaced = replace_or_append_block(
+            existing,
+            config,
+            managed_block,
+        )
+        if existing == rendered:
+            state = "up to date"
+        elif replaced:
+            state = "update available"
+        else:
+            state = "add block"
 
     return RenderedConfig(
         spec=config,
         rendered_content=rendered,
         changed=existing != rendered,
+        state=state,
     )
 
 
@@ -215,14 +266,14 @@ def replace_or_append_block(
     existing: str,
     config: ConfigFile,
     managed_block: str,
-) -> str:
+) -> tuple[str, bool]:
     lines = existing.splitlines(keepends=True)
     begin_lines = marker_line_indexes(lines, config.begin_marker)
     end_lines = marker_line_indexes(lines, config.end_marker)
 
     if not begin_lines and not end_lines:
         separator = "\n" if existing.endswith(("\n", "\r")) else "\n\n"
-        return f"{existing}{separator}{managed_block}"
+        return f"{existing}{separator}{managed_block}", False
 
     if len(begin_lines) != 1 or len(end_lines) != 1:
         raise SetupError(
@@ -237,7 +288,12 @@ def replace_or_append_block(
             f"{config.destination} has invalid {MARKER_TEXT!r} marker order"
         )
 
-    return "".join(lines[:begin_line]) + managed_block + "".join(lines[end_line + 1 :])
+    rendered = (
+        "".join(lines[:begin_line])
+        + managed_block
+        + "".join(lines[end_line + 1 :])
+    )
+    return rendered, True
 
 
 def marker_line_indexes(lines: list[str], marker: str) -> list[int]:
@@ -246,6 +302,111 @@ def marker_line_indexes(lines: list[str], marker: str) -> list[int]:
         for index, line in enumerate(lines)
         if line.rstrip("\r\n") == marker
     ]
+
+
+def run_config_tui(configs: list[RenderedConfig]) -> list[RenderedConfig]:
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        raise SetupError(
+            "setup-devcontainer-configs requires an interactive terminal; "
+            "pass --all for non-interactive use"
+        )
+
+    selected = {
+        index
+        for index, config in enumerate(configs)
+        if config.changed
+    }
+    try:
+        selected_indexes = curses.wrapper(config_tui, configs, selected)
+    except curses.error as error:
+        raise SetupError(f"could not open the terminal UI: {error}") from error
+    return [config for index, config in enumerate(configs) if index in selected_indexes]
+
+
+def config_tui(
+    screen,
+    configs: list[RenderedConfig],
+    selected: set[int],
+) -> set[int]:
+    set_cursor_visible(False)
+    screen.keypad(True)
+    cursor = 0
+
+    while True:
+        draw_config_tui(screen, configs, selected, cursor)
+        key = screen.getch()
+
+        if key in (ord("q"), 27):
+            raise KeyboardInterrupt
+        if key in (curses.KEY_UP, ord("k")):
+            cursor = max(0, cursor - 1)
+            continue
+        if key in (curses.KEY_DOWN, ord("j")):
+            cursor = min(len(configs) - 1, cursor + 1)
+            continue
+        if key == ord(" "):
+            if cursor in selected:
+                selected.remove(cursor)
+            else:
+                selected.add(cursor)
+            continue
+        if key in (ord("a"), ord("A")):
+            selected = (
+                set()
+                if len(selected) == len(configs)
+                else set(range(len(configs)))
+            )
+            continue
+        if key in (curses.KEY_ENTER, 10, 13):
+            return selected
+
+
+def draw_config_tui(
+    screen,
+    configs: list[RenderedConfig],
+    selected: set[int],
+    cursor: int,
+) -> None:
+    screen.erase()
+    height, width = screen.getmaxyx()
+    add_line(screen, 0, "setup-devcontainer-configs", width, curses.A_BOLD)
+    add_line(
+        screen,
+        1,
+        "Up/down or j/k moves, Space selects, a selects all, Enter applies, q quits",
+        width,
+    )
+
+    for index, config in enumerate(configs):
+        marker = "x" if index in selected else " "
+        text = f"[{marker}] {config.spec.name} [{config.state}]"
+        attr = curses.A_REVERSE if index == cursor else curses.A_NORMAL
+        add_line(screen, 3 + index * 2, text, width, attr)
+        add_line(screen, 4 + index * 2, f"    {config.spec.destination}", width)
+
+    add_line(
+        screen,
+        height - 1,
+        f"{len(selected)} of {len(configs)} config file(s) selected",
+        width,
+    )
+    screen.refresh()
+
+
+def add_line(screen, y: int, text: str, width: int, attr: int = 0) -> None:
+    if y < 0 or y >= screen.getmaxyx()[0] or width <= 1:
+        return
+    try:
+        screen.addnstr(y, 0, text.ljust(width), width - 1, attr)
+    except curses.error:
+        pass
+
+
+def set_cursor_visible(visible: bool) -> None:
+    try:
+        curses.curs_set(1 if visible else 0)
+    except curses.error:
+        pass
 
 
 def print_configs(configs: list[RenderedConfig]) -> None:

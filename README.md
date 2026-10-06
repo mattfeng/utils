@@ -78,25 +78,41 @@ home directory:
 uvx --from git+https://github.com/mattfeng/utils setup-devcontainer-configs
 ```
 
+An interactive selector lists the three files and their status. New files,
+missing managed blocks, and blocks with an available template update are
+selected by default; up-to-date files are left unselected. Toggle individual
+files with Space, then press Enter to apply the selection. Re-running the
+command compares each installed block with the template bundled in the current
+utility version and labels changed templates as `update available`.
+
 The command writes `~/.vimrc`, which copies yanked text to the host clipboard
 with OSC 52, and `~/.omp/agent/config.yml`, which configures the preferred Oh My
-Pi models, theme, status line, and Codex web search provider. The terminal used
-to connect to the devcontainer must permit OSC 52 clipboard writes.
+Pi models, theme, status line, and Codex web search provider. It also writes
+`~/.omp/agent/keybindings.yml`, disabling the temporary model selector shortcut
+and assigning `Alt+P` to cycle role models forward. The terminal used to connect
+to the devcontainer must permit OSC 52 clipboard writes.
 
 Each file uses a clearly marked `mattfeng-utils devcontainer config` block.
-Existing content outside that block is preserved, so either file can contain
+Existing content outside that block is preserved, so any file can contain
 additional personal configuration. If a file has incomplete or duplicate
-markers, the command stops without changing either file.
+markers, the command stops without changing any file.
 
-Preview the complete resulting files without writing them:
+Preview the resulting content for selected files without writing it:
 
 ```sh
 uvx --from git+https://github.com/mattfeng/utils \
   setup-devcontainer-configs --dry-run
 ```
 
-Use `--vim-config` or `--omp-config` to choose a different destination for
-either file.
+For non-interactive devcontainer setup, select every file with `--all`:
+
+```sh
+uvx --from git+https://github.com/mattfeng/utils \
+  setup-devcontainer-configs --all
+```
+
+Use `--vim-config`, `--omp-config`, or `--omp-keybindings` to choose different
+destinations.
 
 ## Set up Docker Compose backend services
 
