@@ -65,6 +65,7 @@ statusLine:
   leftSegments: [model, status, mode, path, git]
   rightSegments: [context_pct, usage, cost]
   showHookStatus: false
+  sessionAccent: false
 providers:
   webSearchExclude:
     - perplexity
