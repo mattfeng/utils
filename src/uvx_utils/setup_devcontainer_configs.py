@@ -94,6 +94,8 @@ providers:
     - codex
 startup:
   checkUpdate: false
+dev:
+  autoqa: false
 """
 
 OMP_KEYBINDINGS = """\
