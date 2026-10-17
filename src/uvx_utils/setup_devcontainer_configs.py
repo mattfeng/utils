@@ -96,6 +96,7 @@ startup:
   checkUpdate: false
 dev:
   autoqa: false
+  autoqaConsent: denied
 """
 
 OMP_KEYBINDINGS = """\
