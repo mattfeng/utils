@@ -113,7 +113,7 @@ home directory:
 uvx --from git+https://github.com/mattfeng/utils setup-devcontainer-configs
 ```
 
-An interactive selector lists the three files and their status. New files,
+An interactive selector lists the four files and their status. New files,
 missing managed blocks, and blocks with an available template update are
 selected by default; up-to-date files are left unselected. Toggle individual
 files with Space, then press Enter to apply the selection. Re-running the
@@ -126,6 +126,11 @@ Pi models, theme, status line, and Codex web search provider. It also writes
 `~/.omp/agent/keybindings.yml`, disabling the temporary model selector shortcut
 and assigning `Alt+P` to cycle role models forward. The terminal used to connect
 to the devcontainer must permit OSC 52 clipboard writes.
+
+It also writes `~/.omp/agent/SYSTEM.md` from the bundled
+[Oh My Pi system prompt](https://raw.githubusercontent.com/can1357/oh-my-pi/refs/heads/main/packages/coding-agent/src/prompts/system/system-prompt.md),
+with section 5 Verify removed. The remaining template directives are preserved
+for Oh My Pi to render; setup does not fetch the prompt at runtime.
 
 Each file uses a clearly marked `mattfeng-utils devcontainer config` block.
 Existing content outside that block is preserved, so any file can contain
@@ -146,8 +151,8 @@ uvx --from git+https://github.com/mattfeng/utils \
   setup-devcontainer-configs --all
 ```
 
-Use `--vim-config`, `--omp-config`, or `--omp-keybindings` to choose different
-destinations.
+Use `--vim-config`, `--omp-config`, `--omp-keybindings`, or `--omp-system-prompt`
+to choose different destinations.
 
 ## Set up Docker Compose backend services
 

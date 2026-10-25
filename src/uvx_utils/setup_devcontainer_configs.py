@@ -8,12 +8,14 @@ import sys
 import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
+from importlib import resources
 from pathlib import Path
 
 
 DEFAULT_VIM_CONFIG = Path("~/.vimrc")
 DEFAULT_OMP_CONFIG = Path("~/.omp/agent/config.yml")
 DEFAULT_OMP_KEYBINDINGS = Path("~/.omp/agent/keybindings.yml")
+DEFAULT_OMP_SYSTEM_PROMPT = Path("~/.omp/agent/SYSTEM.md")
 MARKER_TEXT = "mattfeng-utils devcontainer config"
 
 VIM_CONFIG = r'''" Copy yanked text to the host clipboard with OSC 52.
@@ -114,11 +116,11 @@ class ConfigFile:
 
     @property
     def begin_marker(self) -> str:
-        return f"{self.comment_prefix} <-- {MARKER_TEXT}: begin -->"
+        return f"{self.comment_prefix} {MARKER_TEXT}: begin -->"
 
     @property
     def end_marker(self) -> str:
-        return f"{self.comment_prefix} <-- {MARKER_TEXT}: end -->"
+        return f"{self.comment_prefix} {MARKER_TEXT}: end -->"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -162,6 +164,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--omp-system-prompt",
+        type=Path,
+        default=DEFAULT_OMP_SYSTEM_PROMPT,
+        help=(
+            "Oh My Pi system prompt file. "
+            f"Defaults to {DEFAULT_OMP_SYSTEM_PROMPT}."
+        ),
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         help="Select all config files without opening the interactive selector.",
@@ -176,13 +187,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 def setup_devcontainer_configs(args: argparse.Namespace) -> int:
     configs = [
-        ConfigFile("Vim", args.vim_config.expanduser(), VIM_CONFIG, '"'),
-        ConfigFile("Oh My Pi", args.omp_config.expanduser(), OMP_CONFIG, "#"),
+        ConfigFile("Vim", args.vim_config.expanduser(), VIM_CONFIG, '" <--'),
+        ConfigFile("Oh My Pi", args.omp_config.expanduser(), OMP_CONFIG, "# <--"),
         ConfigFile(
             "Oh My Pi keybindings",
             args.omp_keybindings.expanduser(),
             OMP_KEYBINDINGS,
-            "#",
+            "# <--",
+        ),
+        ConfigFile(
+            "Oh My Pi system prompt",
+            args.omp_system_prompt.expanduser(),
+            (
+                resources.files("uvx_utils")
+                / "templates"
+                / "devcontainer"
+                / "SYSTEM.md"
+            ).read_text(encoding="utf-8"),
+            "<!--",
         ),
     ]
     ensure_distinct_destinations(configs)
