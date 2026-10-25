@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 dependencies = ["jinja2>=3.1.6"]
 
 [project.scripts]
-create-agents-md = "uvx_utils.create_agents_md:main"
+setup-agents-md = "uvx_utils.setup_agents_md:main"
 install-emmet-snippets = "uvx_utils.install_emmet_snippets:main"
 install-jj = "uvx_utils.install_jj:main"
 install-just = "uvx_utils.install_just:main"

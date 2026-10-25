@@ -1,10 +1,10 @@
 # Document templates
 
-The `create-agents-md` utility was imported from
+The `setup-agents-md` utility was imported from
 [`mattfeng/agents-md` at `1d4e8ac`](https://github.com/mattfeng/agents-md/tree/1d4e8ac87f347ca0d2b1638cea3fdcd441e23645).
-Its command name, options, prompts, template contents, ordering, and generated
-metadata remain compatible with the original utility. The implementation lives in
-`src/uvx_utils/create_agents_md.py`.
+The command was renamed from `create-agents-md`; options, prompts, template
+contents, ordering, and generated metadata remain compatible with the original
+utility. The implementation lives in `src/uvx_utils/setup_agents_md.py`.
 
 ## Bundled AGENTS.md templates
 
@@ -45,7 +45,7 @@ outside the block is preserved unless `--replace` is supplied.
 Add a Markdown file to `src/uvx_utils/templates/agents/`, such as `example.md`.
 It automatically appears as `example` in prompts, `--template` choices, and `list`.
 New names sort alphabetically after the known hierarchy; add a name to
-`TEMPLATE_HIERARCHY` in `create_agents_md.py` when a specific position is needed.
+`TEMPLATE_HIERARCHY` in `setup_agents_md.py` when a specific position is needed.
 Files beneath `src/uvx_utils` are included by the existing wheel and source
 distribution configuration, so templates require no separate download or manifest.
 
@@ -61,8 +61,8 @@ The generator requires `jinja2>=3.1.6`, declared in `pyproject.toml`. To install
 the project's dependencies yourself, run `uv sync`. From this checkout, use:
 
 ```sh
-uv run create-agents-md list
-uv run create-agents-md --target /path/to/project --template base --template python
+uv run setup-agents-md list
+uv run setup-agents-md --target /path/to/project --template base --template python
 ```
 
 The second command writes the target file. Add `--javascript-package-manager npm`

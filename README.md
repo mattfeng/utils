@@ -8,7 +8,7 @@ Generate `AGENTS.md` from the bundled templates, now consolidated from
 [`mattfeng/agents-md`](https://github.com/mattfeng/agents-md):
 
 ```sh
-uvx --from git+https://github.com/mattfeng/utils create-agents-md
+uvx --from git+https://github.com/mattfeng/utils setup-agents-md
 ```
 
 The command prompts for templates, remembers previous selections, and prints the
@@ -19,7 +19,7 @@ migration. Pass `--replace` to replace the entire file.
 Choose a project directory (or an `AGENTS.md` path) and select templates explicitly:
 
 ```sh
-uvx --from git+https://github.com/mattfeng/utils create-agents-md \
+uvx --from git+https://github.com/mattfeng/utils setup-agents-md \
   --target /path/to/project --template base --template python
 ```
 
@@ -30,7 +30,7 @@ for `npm` or `yarn` and remember the choice; pass
 List all 11 bundled templates:
 
 ```sh
-uvx --from git+https://github.com/mattfeng/utils create-agents-md list
+uvx --from git+https://github.com/mattfeng/utils setup-agents-md list
 ```
 
 Templates use Jinja2 and are bundled with the utility; generation needs no network
