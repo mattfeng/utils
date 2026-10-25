@@ -4,9 +4,10 @@ version = "0.3.0"
 description = "Small uvx-installable utility CLIs."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["jinja2>=3.1.6"]
 
 [project.scripts]
+create-agents-md = "uvx_utils.create_agents_md:main"
 install-emmet-snippets = "uvx_utils.install_emmet_snippets:main"
 install-jj = "uvx_utils.install_jj:main"
 install-just = "uvx_utils.install_just:main"
@@ -29,6 +30,7 @@ packages = ["src/uvx_utils"]
 include = [
   "src/uvx_utils",
   "zsh-plugins",
+  "docs/document-templates.md",
   "README.md",
   "pyproject.toml",
 ]
