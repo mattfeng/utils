@@ -1,0 +1,29 @@
+" Copy yanked text to the host clipboard with OSC 52.
+if exists('##TextYankPost')
+  function! s:Osc52Copy(lines, register_type) abort
+    let l:text = join(a:lines, "\n")
+    if a:register_type ==# 'V'
+      let l:text .= "\n"
+    endif
+
+    let l:encoded = substitute(system('base64', l:text), '\_s', '', 'g')
+    if v:shell_error
+      echoerr 'OSC 52 copy failed: base64 exited with an error'
+      return
+    endif
+
+    silent! call writefile(["\x1b]52;c;" . l:encoded . "\x07"], '/dev/tty', 'b')
+  endfunction
+
+  function! s:Osc52CopyYank() abort
+    if v:event.operator !=# 'y' || v:event.regname ==# '_'
+      return
+    endif
+    call s:Osc52Copy(v:event.regcontents, v:event.regtype)
+  endfunction
+
+  augroup osc52_yank
+    autocmd!
+    autocmd TextYankPost * call <SID>Osc52CopyYank()
+  augroup END
+endif

@@ -1,7 +1,7 @@
 # Deep learning
 
 ## Minimalism
-- Implementations should prioritize minimalism and using few dependencies. The stack that should always be used is JAX, Equinox, einops, optax, jaxtyping, grain, and tqdm.
+- Implementations should prioritize minimalism and using few dependencies. The stack that should always be used is JAX, Equinox, einops, optax, jaxtyping, beartype, grain, and tqdm.
 
 ## Python environment
 

@@ -28,3 +28,4 @@
 ## Verification
 - Do not run applications, services, scripts, examples, demos, test suites, or other project code just to verify work unless the user explicitly asks.
 - Static checks such as linting, formatting/style checks, and type checks are allowed.
+- Do not write tests unless explicitly asked to do so.

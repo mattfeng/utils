@@ -1,0 +1,49 @@
+setupVersion: 2
+modelRoles:
+  slow: openai-codex/gpt-6-astra:high
+  default: openai-codex/gpt-6-astra:medium
+  smol: openai-codex/gpt-6-luna:low
+defaultThinkingLevel: medium
+symbolPreset: unicode
+composer:
+  shape: rule
+theme:
+  dark: dark-catppuccin
+statusLine:
+  compactThinkingLevel: false
+  preset: custom
+  leftSegments: [model, status, mode, path, git]
+  rightSegments: [context_pct, usage, cost]
+  showHookStatus: false
+  sessionAccent: false
+providers:
+  webSearchExclude:
+    - perplexity
+    - gemini
+    - anthropic
+    - xai
+    - zai
+    - exa
+    - tinyfish
+    - jina
+    - kagi
+    - tavily
+    - firecrawl
+    - brave
+    - kimi
+    - parallel
+    - synthetic
+    - searxng
+    - startpage
+    - duckduckgo
+    - ecosia
+    - google
+    - mojeek
+    - public
+  webSearchOrder:
+    - codex
+startup:
+  checkUpdate: false
+dev:
+  autoqa: false
+  autoqaConsent: denied

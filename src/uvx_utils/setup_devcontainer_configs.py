@@ -18,94 +18,6 @@ DEFAULT_OMP_KEYBINDINGS = Path("~/.omp/agent/keybindings.yml")
 DEFAULT_OMP_SYSTEM_PROMPT = Path("~/.omp/agent/SYSTEM.md")
 MARKER_TEXT = "mattfeng-utils devcontainer config"
 
-VIM_CONFIG = r'''" Copy yanked text to the host clipboard with OSC 52.
-if exists('##TextYankPost')
-  function! s:Osc52Copy(lines, register_type) abort
-    let l:text = join(a:lines, "\n")
-    if a:register_type ==# 'V'
-      let l:text .= "\n"
-    endif
-
-    let l:encoded = substitute(system('base64', l:text), '\_s', '', 'g')
-    if v:shell_error
-      echoerr 'OSC 52 copy failed: base64 exited with an error'
-      return
-    endif
-
-    silent! call writefile(["\x1b]52;c;" . l:encoded . "\x07"], '/dev/tty', 'b')
-  endfunction
-
-  function! s:Osc52CopyYank() abort
-    if v:event.operator !=# 'y' || v:event.regname ==# '_'
-      return
-    endif
-    call s:Osc52Copy(v:event.regcontents, v:event.regtype)
-  endfunction
-
-  augroup osc52_yank
-    autocmd!
-    autocmd TextYankPost * call <SID>Osc52CopyYank()
-  augroup END
-endif
-'''
-
-OMP_CONFIG = """\
-setupVersion: 2
-modelRoles:
-  slow: openai-codex/gpt-6-astra:high
-  default: openai-codex/gpt-6-astra:medium
-  smol: openai-codex/gpt-6-luna:low
-defaultThinkingLevel: medium
-symbolPreset: unicode
-composer:
-  shape: rule
-theme:
-  dark: dark-catppuccin
-statusLine:
-  compactThinkingLevel: false
-  preset: custom
-  leftSegments: [model, status, mode, path, git]
-  rightSegments: [context_pct, usage, cost]
-  showHookStatus: false
-  sessionAccent: false
-providers:
-  webSearchExclude:
-    - perplexity
-    - gemini
-    - anthropic
-    - xai
-    - zai
-    - exa
-    - tinyfish
-    - jina
-    - kagi
-    - tavily
-    - firecrawl
-    - brave
-    - kimi
-    - parallel
-    - synthetic
-    - searxng
-    - startpage
-    - duckduckgo
-    - ecosia
-    - google
-    - mojeek
-    - public
-  webSearchOrder:
-    - codex
-startup:
-  checkUpdate: false
-dev:
-  autoqa: false
-  autoqaConsent: denied
-"""
-
-OMP_KEYBINDINGS = """\
-app.model.selectTemporary: []
-app.model.cycleForward: Alt+P
-"""
-
 
 @dataclass(frozen=True)
 class ConfigFile:
@@ -186,24 +98,30 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def setup_devcontainer_configs(args: argparse.Namespace) -> int:
+    templates = resources.files("uvx_utils") / "templates" / "devcontainer"
     configs = [
-        ConfigFile("Vim", args.vim_config.expanduser(), VIM_CONFIG, '" <--'),
-        ConfigFile("Oh My Pi", args.omp_config.expanduser(), OMP_CONFIG, "# <--"),
+        ConfigFile(
+            "Vim",
+            args.vim_config.expanduser(),
+            (templates / "vimrc").read_text(encoding="utf-8"),
+            '" <--',
+        ),
+        ConfigFile(
+            "Oh My Pi",
+            args.omp_config.expanduser(),
+            (templates / "config.yml").read_text(encoding="utf-8"),
+            "# <--",
+        ),
         ConfigFile(
             "Oh My Pi keybindings",
             args.omp_keybindings.expanduser(),
-            OMP_KEYBINDINGS,
+            (templates / "keybindings.yml").read_text(encoding="utf-8"),
             "# <--",
         ),
         ConfigFile(
             "Oh My Pi system prompt",
             args.omp_system_prompt.expanduser(),
-            (
-                resources.files("uvx_utils")
-                / "templates"
-                / "devcontainer"
-                / "SYSTEM.md"
-            ).read_text(encoding="utf-8"),
+            (templates / "SYSTEM.md").read_text(encoding="utf-8"),
             "<!--",
         ),
     ]
