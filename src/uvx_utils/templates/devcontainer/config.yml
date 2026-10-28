@@ -1,8 +1,8 @@
 setupVersion: 2
 modelRoles:
   slow: openai-codex/gpt-6-astra:high
-  default: openai-codex/gpt-6-astra:medium
-  smol: openai-codex/gpt-6-luna:low
+  default: openai-codex/gpt-6.1-sol:high
+  smol: openai-codex/gpt-6-luna:medium
 defaultThinkingLevel: medium
 symbolPreset: unicode
 composer:
