@@ -117,8 +117,9 @@ An interactive selector lists the four files and their status. New files,
 missing managed blocks, and blocks with an available template update are
 selected by default; up-to-date files are left unselected. Toggle individual
 files with Space, then press Enter to apply the selection. Re-running the
-command compares each installed block with the template bundled in the current
-utility version and labels changed templates as `update available`.
+command merges each installed block with the template bundled in the current
+utility version and labels pending changes as `update available`. Edits you have
+made are retained even inside the managed block.
 
 The command writes `~/.vimrc`, which copies yanked text to the host clipboard
 with OSC 52, and `~/.omp/agent/config.yml`, which configures the preferred Oh My
@@ -136,6 +137,23 @@ Each file uses a clearly marked `mattfeng-utils devcontainer config` block.
 Existing content outside that block is preserved, so any file can contain
 additional personal configuration. If a file has incomplete or duplicate
 markers, the command stops without changing any file.
+
+Each block also includes guidance comments and a versioned, base64-encoded copy
+of the last generated defaults. Keep these comments intact and commit them with
+the config when storing it in version control. Setup uses that baseline for a
+three-way, line-by-line merge of your edits and new defaults; no separate state
+file or Git installation is needed. After a successful update, the baseline
+advances to the new defaults while your edits remain in the config content.
+
+Overlapping changes prompt you to keep your installed content, use the new
+defaults, or abort. Keeping your content accepts it as your customization of
+the new baseline. You can abort, manually reconcile the displayed differences,
+and rerun setup. Older blocks without a baseline are upgraded automatically
+when they match the current defaults; otherwise they require the same review
+because setup cannot identify which lines you changed. All selected conflicts
+must be resolved before any file is written. Non-interactive runs stop on
+conflicts without writing any files; `--all --dry-run` shows the differences
+and preserves the installed content in its preview.
 
 Preview the resulting content for selected files without writing it:
 

@@ -47,3 +47,5 @@ startup:
 dev:
   autoqa: false
   autoqaConsent: denied
+task:
+  maxRecursionDepth: 0

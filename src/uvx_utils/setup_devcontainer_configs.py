@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import curses
 import os
 import stat
@@ -8,6 +10,7 @@ import sys
 import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass
+from difflib import SequenceMatcher, unified_diff
 from importlib import resources
 from pathlib import Path
 
@@ -17,6 +20,11 @@ DEFAULT_OMP_CONFIG = Path("~/.omp/agent/config.yml")
 DEFAULT_OMP_KEYBINDINGS = Path("~/.omp/agent/keybindings.yml")
 DEFAULT_OMP_SYSTEM_PROMPT = Path("~/.omp/agent/SYSTEM.md")
 MARKER_TEXT = "mattfeng-utils devcontainer config"
+BASELINE_LABEL = "generated baseline v1 (base64): "
+BLOCK_GUIDANCE = (
+    "Generated defaults + your edits; setup merges future updates.",
+    "Edit the content below; keep the baseline and markers intact.",
+)
 
 
 @dataclass(frozen=True)
@@ -33,6 +41,9 @@ class ConfigFile:
     @property
     def end_marker(self) -> str:
         return f"{self.comment_prefix} {MARKER_TEXT}: end -->"
+
+    def comment(self, text: str) -> str:
+        return f"{self.comment_prefix} {text} -->\n"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -137,7 +148,8 @@ def setup_devcontainer_configs(args: argparse.Namespace) -> int:
         print_configs(selected)
         return 0
 
-    pending = [config for config in selected if config.changed]
+    # Resolve every selected conflict before writing any destination.
+    pending = [resolve_conflict(config) for config in selected if config.changed]
     if not pending:
         print("selected config files are already up to date")
         return 0
@@ -160,26 +172,55 @@ class RenderedConfig:
     rendered_content: str
     changed: bool
     state: str
+    conflict: bool = False
+    local_content: str = ""
+    prefix: str = ""
+    suffix: str = ""
+
+
+def template_content(config: ConfigFile) -> str:
+    return config.content.rstrip() + "\n"
+
+
+def managed_block(config: ConfigFile, content: str) -> str:
+    baseline = base64.b64encode(template_content(config).encode("utf-8")).decode("ascii")
+    return (
+        f"{config.begin_marker}\n"
+        + "".join(config.comment(line) for line in BLOCK_GUIDANCE)
+        + config.comment(BASELINE_LABEL + baseline)
+        + content
+        + f"{config.end_marker}\n"
+    )
 
 
 def render_config(config: ConfigFile) -> RenderedConfig:
     existing = read_config(config.destination)
-    managed_block = (
-        f"{config.begin_marker}\n{config.content.rstrip()}\n{config.end_marker}\n"
-    )
+    block = managed_block(config, template_content(config))
 
     if existing is None:
-        rendered = managed_block
+        rendered = block
         state = "new file"
     elif not existing:
-        rendered = managed_block
+        rendered = block
         state = "add block"
     else:
-        rendered, replaced = replace_or_append_block(
-            existing,
-            config,
-            managed_block,
-        )
+        parts = split_managed_block(existing, config)
+        if parts is None:
+            separator = "\n" if existing.endswith(("\n", "\r")) else "\n\n"
+            rendered = existing + separator + block
+            replaced = False
+        else:
+            prefix, installed, suffix = parts
+            baseline, local = read_baseline(installed, config)
+            incoming = template_content(config)
+            merged = merge_content(baseline, local, incoming)
+            if merged is None:
+                return RenderedConfig(
+                    config, existing, True, "conflict: review required", True,
+                    local, prefix, suffix,
+                )
+            rendered = prefix + managed_block(config, merged) + suffix
+            replaced = True
         if existing == rendered:
             state = "up to date"
         elif replaced:
@@ -206,18 +247,16 @@ def read_config(path: Path) -> str | None:
         raise SetupError(f"could not read {path}: {error}") from error
 
 
-def replace_or_append_block(
+def split_managed_block(
     existing: str,
     config: ConfigFile,
-    managed_block: str,
-) -> tuple[str, bool]:
+) -> tuple[str, str, str] | None:
     lines = existing.splitlines(keepends=True)
     begin_lines = marker_line_indexes(lines, config.begin_marker)
     end_lines = marker_line_indexes(lines, config.end_marker)
 
     if not begin_lines and not end_lines:
-        separator = "\n" if existing.endswith(("\n", "\r")) else "\n\n"
-        return f"{existing}{separator}{managed_block}", False
+        return None
 
     if len(begin_lines) != 1 or len(end_lines) != 1:
         raise SetupError(
@@ -232,12 +271,115 @@ def replace_or_append_block(
             f"{config.destination} has invalid {MARKER_TEXT!r} marker order"
         )
 
-    rendered = (
-        "".join(lines[:begin_line])
-        + managed_block
-        + "".join(lines[end_line + 1 :])
+    return (
+        "".join(lines[:begin_line]),
+        "".join(lines[begin_line + 1 : end_line]),
+        "".join(lines[end_line + 1 :]),
     )
-    return rendered, True
+
+
+def read_baseline(installed: str, config: ConfigFile) -> tuple[str | None, str]:
+    lines = installed.splitlines(keepends=True)
+    label = f"{config.comment_prefix} {BASELINE_LABEL}"
+    indexes = [i for i, line in enumerate(lines) if line.startswith(label)]
+    if not indexes:
+        if any("generated baseline" in line for line in lines):
+            raise SetupError(f"{config.destination} has unrecognized baseline metadata")
+        return None, installed  # Legacy block: never guess which lines were user edits.
+    index = indexes[0]
+    if len(indexes) != 1 or index != 2:
+        raise SetupError(f"{config.destination} has invalid baseline metadata")
+    if [line.rstrip("\r\n") for line in lines[:2]] != [
+        config.comment(line).rstrip("\n") for line in BLOCK_GUIDANCE
+    ]:
+        raise SetupError(f"{config.destination} has modified baseline header comments")
+    encoded = lines[index][len(label):].rstrip("\r\n")
+    if not encoded.endswith(" -->"):
+        raise SetupError(f"{config.destination} has incomplete baseline metadata")
+    try:
+        baseline = base64.b64decode(encoded[:-4], validate=True).decode("utf-8")
+    except (ValueError, binascii.Error, UnicodeError) as error:
+        raise SetupError(f"{config.destination} has invalid baseline metadata") from error
+    return baseline, "".join(lines[index + 1 :])
+
+
+def merge_content(base: str | None, local: str, incoming: str) -> str | None:
+    """Merge independent line edits; return None when a user decision is needed."""
+    if local == incoming or local == base:
+        return incoming
+    if incoming == base:
+        return local
+    if base is None:
+        return None
+
+    original = base.splitlines(keepends=True)
+
+    def edits(content: str) -> list[tuple[int, int, list[str]]]:
+        lines = content.splitlines(keepends=True)
+        return [
+            (start, end, lines[new_start:new_end])
+            for tag, start, end, new_start, new_end in SequenceMatcher(
+                None, original, lines, autojunk=False,
+            ).get_opcodes()
+            if tag != "equal"
+        ]
+
+    local_edits = edits(local)
+    incoming_edits = edits(incoming)
+    for start, end, replacement in local_edits:
+        for other_start, other_end, other_replacement in incoming_edits:
+            if (start, end, replacement) == (other_start, other_end, other_replacement):
+                continue
+            overlap = max(start, other_start) < min(end, other_end)
+            insertion_overlap = (
+                start == end and other_start <= start < other_end
+                or other_start == other_end and start <= other_start < end
+                or start == end == other_start == other_end
+            )
+            if overlap or insertion_overlap:
+                return None
+
+    combined = local_edits + [edit for edit in incoming_edits if edit not in local_edits]
+    result = original[:]
+    for start, end, replacement in sorted(combined, key=lambda edit: edit[:2], reverse=True):
+        result[start:end] = replacement
+    return "".join(result)
+
+
+def conflict_diff(config: RenderedConfig) -> str:
+    return "".join(unified_diff(
+        config.local_content.splitlines(keepends=True),
+        template_content(config.spec).splitlines(keepends=True),
+        fromfile="your installed content",
+        tofile="new generated defaults",
+    ))
+
+
+def resolve_conflict(config: RenderedConfig) -> RenderedConfig:
+    if not config.conflict:
+        return config
+    if not sys.stdin.isatty() or not sys.stdout.isatty():
+        raise SetupError(
+            f"{config.spec.destination} needs conflict review; no files were written. "
+            "Run in an interactive terminal (use --all to skip the selector), "
+            "or inspect --all --dry-run."
+        )
+    print(f"\nConflict or missing baseline in {config.spec.destination}")
+    print(conflict_diff(config), end="")
+    print("Keep retains the entire installed block; generated replaces it with new defaults.")
+    print("Either choice records the new defaults as the baseline for future merges.")
+    while True:
+        try:
+            choice = input("[k]eep your content / use [g]enerated defaults / [a]bort (default): ")
+        except EOFError as error:
+            raise SetupError("conflict review cancelled; no files were written") from error
+        choice = choice.strip().lower()
+        if choice in ("", "a"):
+            raise SetupError("conflict review cancelled; no files were written")
+        if choice in ("k", "g"):
+            content = config.local_content if choice == "k" else template_content(config.spec)
+            rendered = config.prefix + managed_block(config.spec, content) + config.suffix
+            return RenderedConfig(config.spec, rendered, True, "conflict resolved")
 
 
 def marker_line_indexes(lines: list[str], marker: str) -> list[int]:
@@ -358,6 +500,9 @@ def print_configs(configs: list[RenderedConfig]) -> None:
         if index:
             print()
         print(f"destination: {config.spec.destination}")
+        if config.conflict:
+            print("CONFLICT: installed file preserved; interactive review required.")
+            print(conflict_diff(config), end="")
         print(config.rendered_content, end="")
 
 
