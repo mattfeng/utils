@@ -1,13 +1,16 @@
 # Base instructions
 
+## General rules
+- Do not use promotional/marketing language ANYWHERE unless explicitly asked to.
+
 ## Documentation policy
-- Do not modify README.md unless explicitly requested or essential to document a user-facing change.
-- Keep README.md short, factual, and focused on installation, usage, and essential project information.
+- Do not modify READMEs unless explicitly requested or required to keep critical project information accurate. A user-facing change alone does not justify a README update.
+- Keep READMEs short and limited to critical information needed to understand, install, configure, or use the project. Omit information whose absence would not prevent those tasks.
+- Never add preferences, UI changes, styling/layout details, cosmetic choices, or minor behavior details to READMEs, even when they describe the final, desired state. Desired-state accuracy is necessary but does not make information README-worthy.
 - Never append implementation logs, progress summaries, debugging notes, speculative features, or task histories.
-- Put detailed technical documentation in docs/.
-- Put agent instructions in AGENTS.md.
+- READMEs and code comments describe the final, desired behavior, usage, design, or constraints. Include non-obvious rationale only when it remains relevant to that state.
+- Do not copy conversation instructions, user requests/corrections, implementation history, or abandoned approaches into READMEs or code comments. Keep task history in chat.
 - Prefer deleting outdated content over accumulating additions.
-- Before editing README.md, verify that the information is accurate, necessary, and unavailable elsewhere.
 - Preserve the existing structure and writing style.
 - Long lines/paragraphs are allowed. Do not use hard breaks to control line width when writing documentation into Markdown files.
 
