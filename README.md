@@ -113,8 +113,9 @@ home directory:
 uvx --from git+https://github.com/mattfeng/utils setup-devcontainer-configs
 ```
 
-An interactive selector lists the five files and their status. New files,
-missing managed blocks, and blocks with an available template update are
+An interactive selector lists the config files and discovered slash commands
+with their status. New files, missing managed blocks, and blocks with an
+available template update are
 selected by default; up-to-date files are left unselected. Toggle individual
 files with Space, then press Enter to apply the selection. Re-running the
 command merges each installed block with the template bundled in the current
@@ -133,12 +134,15 @@ It also writes `~/.omp/agent/SYSTEM.md` from the bundled
 with section 5 Verify removed. The remaining template directives are preserved
 for Oh My Pi to render; setup does not fetch the prompt at runtime.
 
-The bundled `/explain` slash command is installed at
-`~/.omp/agent/commands/explain.md`. Use `/explain src/example.py` to explain a
-file, symbol, change, or question, or `/explain` to explain the code or changes
-most recently discussed. It reads relevant code and explains it without editing
-files or running project code. Restart Oh My Pi after installation to load the
-command. The template uses Oh My Pi's
+Slash commands are discovered from Markdown files directly inside
+`src/uvx_utils/templates/devcontainer/commands/` and listed alphabetically.
+Each file is installed under `~/.omp/agent/commands/` with the same filename;
+the filename without `.md` becomes the command name. For example,
+`explain-ml.md` installs `/explain-ml`, used as `/explain-ml path/to/implementation`.
+Add or rename templates in that directory without changing the installer. If
+the directory is missing or contains no Markdown files, setup installs only the
+other config files. Restart Oh My Pi after installation to load the commands.
+Templates use Oh My Pi's
 [Markdown command format](https://github.com/can1357/oh-my-pi/blob/main/docs/slash-command-internals.md),
 including description frontmatter and `$ARGUMENTS` substitution.
 
@@ -147,7 +151,7 @@ Existing content outside that block is preserved, so any file can contain
 additional personal configuration. If a file has incomplete or duplicate
 markers, the command stops without changing any file.
 
-For the slash command, YAML frontmatter stays at the start of the file and is
+For slash commands, YAML frontmatter stays at the start of each file and is
 included in the merge baseline. An existing command without a managed block
 requires conflict review unless it exactly matches the bundled template.
 

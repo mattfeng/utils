@@ -146,14 +146,21 @@ def setup_devcontainer_configs(args: argparse.Namespace) -> int:
             (templates / "SYSTEM.md").read_text(encoding="utf-8"),
             "<!--",
         ),
-        ConfigFile(
-            "Oh My Pi /explain command",
-            args.omp_commands_dir.expanduser() / "explain.md",
-            (templates / "commands" / "explain.md").read_text(encoding="utf-8"),
-            "<!--",
-            markdown_frontmatter=True,
-        ),
     ]
+    command_templates = templates / "commands"
+    if command_templates.is_dir():
+        commands_dir = args.omp_commands_dir.expanduser()
+        configs.extend(
+            ConfigFile(
+                f"Oh My Pi /{template.name[:-3]} command",
+                commands_dir / template.name,
+                template.read_text(encoding="utf-8"),
+                "<!--",
+                markdown_frontmatter=True,
+            )
+            for template in sorted(command_templates.iterdir(), key=lambda item: item.name)
+            if template.is_file() and template.name.endswith(".md")
+        )
     ensure_distinct_destinations(configs)
     rendered = [render_config(config) for config in configs]
     selected = rendered if args.all else run_config_tui(rendered)
