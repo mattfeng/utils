@@ -19,6 +19,7 @@ DEFAULT_VIM_CONFIG = Path("~/.vimrc")
 DEFAULT_OMP_CONFIG = Path("~/.omp/agent/config.yml")
 DEFAULT_OMP_KEYBINDINGS = Path("~/.omp/agent/keybindings.yml")
 DEFAULT_OMP_SYSTEM_PROMPT = Path("~/.omp/agent/SYSTEM.md")
+DEFAULT_OMP_COMMANDS_DIR = Path("~/.omp/agent/commands")
 MARKER_TEXT = "mattfeng-utils devcontainer config"
 BASELINE_LABEL = "generated baseline v1 (base64): "
 BLOCK_GUIDANCE = (
@@ -33,6 +34,7 @@ class ConfigFile:
     destination: Path
     content: str
     comment_prefix: str
+    markdown_frontmatter: bool = False
 
     @property
     def begin_marker(self) -> str:
@@ -96,6 +98,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--omp-commands-dir",
+        type=Path,
+        default=DEFAULT_OMP_COMMANDS_DIR,
+        help=(
+            "Oh My Pi slash commands directory. "
+            f"Defaults to {DEFAULT_OMP_COMMANDS_DIR}."
+        ),
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         help="Select all config files without opening the interactive selector.",
@@ -134,6 +145,13 @@ def setup_devcontainer_configs(args: argparse.Namespace) -> int:
             args.omp_system_prompt.expanduser(),
             (templates / "SYSTEM.md").read_text(encoding="utf-8"),
             "<!--",
+        ),
+        ConfigFile(
+            "Oh My Pi /explain command",
+            args.omp_commands_dir.expanduser() / "explain.md",
+            (templates / "commands" / "explain.md").read_text(encoding="utf-8"),
+            "<!--",
+            markdown_frontmatter=True,
         ),
     ]
     ensure_distinct_destinations(configs)
@@ -182,14 +200,31 @@ def template_content(config: ConfigFile) -> str:
     return config.content.rstrip() + "\n"
 
 
-def managed_block(config: ConfigFile, content: str) -> str:
+def split_frontmatter(content: str) -> tuple[str, str]:
+    lines = content.splitlines(keepends=True)
+    if not lines or lines[0].rstrip("\r\n") != "---":
+        return "", content
+    for index in range(1, len(lines)):
+        if lines[index].rstrip("\r\n") == "---":
+            return "".join(lines[:index + 1]), "".join(lines[index + 1:])
+    raise SetupError("Markdown command has unclosed frontmatter")
+
+
+def managed_block(
+    config: ConfigFile, content: str, prefix: str = "", suffix: str = "",
+) -> str:
     baseline = base64.b64encode(template_content(config).encode("utf-8")).decode("ascii")
+    frontmatter = ""
+    if config.markdown_frontmatter:
+        # OMP only recognizes frontmatter at the start of the file.
+        frontmatter, content = split_frontmatter(content)
     return (
-        f"{config.begin_marker}\n"
+        frontmatter + prefix + f"{config.begin_marker}\n"
         + "".join(config.comment(line) for line in BLOCK_GUIDANCE)
         + config.comment(BASELINE_LABEL + baseline)
         + content
         + f"{config.end_marker}\n"
+        + suffix
     )
 
 
@@ -206,12 +241,23 @@ def render_config(config: ConfigFile) -> RenderedConfig:
     else:
         parts = split_managed_block(existing, config)
         if parts is None:
+            if config.markdown_frontmatter:
+                # Appending a prompt would execute both commands' instructions.
+                if existing != template_content(config):
+                    return RenderedConfig(
+                        config, existing, True, "conflict: review required", True,
+                        existing,
+                    )
+                return RenderedConfig(config, block, True, "add block")
             separator = "\n" if existing.endswith(("\n", "\r")) else "\n\n"
             rendered = existing + separator + block
             replaced = False
         else:
             prefix, installed, suffix = parts
             baseline, local = read_baseline(installed, config)
+            if config.markdown_frontmatter:
+                frontmatter, prefix = split_frontmatter(prefix)
+                local = frontmatter + local
             incoming = template_content(config)
             merged = merge_content(baseline, local, incoming)
             if merged is None:
@@ -219,7 +265,7 @@ def render_config(config: ConfigFile) -> RenderedConfig:
                     config, existing, True, "conflict: review required", True,
                     local, prefix, suffix,
                 )
-            rendered = prefix + managed_block(config, merged) + suffix
+            rendered = managed_block(config, merged, prefix, suffix)
             replaced = True
         if existing == rendered:
             state = "up to date"
@@ -378,7 +424,7 @@ def resolve_conflict(config: RenderedConfig) -> RenderedConfig:
             raise SetupError("conflict review cancelled; no files were written")
         if choice in ("k", "g"):
             content = config.local_content if choice == "k" else template_content(config.spec)
-            rendered = config.prefix + managed_block(config.spec, content) + config.suffix
+            rendered = managed_block(config.spec, content, config.prefix, config.suffix)
             return RenderedConfig(config.spec, rendered, True, "conflict resolved")
 
 

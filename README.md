@@ -113,7 +113,7 @@ home directory:
 uvx --from git+https://github.com/mattfeng/utils setup-devcontainer-configs
 ```
 
-An interactive selector lists the four files and their status. New files,
+An interactive selector lists the five files and their status. New files,
 missing managed blocks, and blocks with an available template update are
 selected by default; up-to-date files are left unselected. Toggle individual
 files with Space, then press Enter to apply the selection. Re-running the
@@ -133,10 +133,23 @@ It also writes `~/.omp/agent/SYSTEM.md` from the bundled
 with section 5 Verify removed. The remaining template directives are preserved
 for Oh My Pi to render; setup does not fetch the prompt at runtime.
 
+The bundled `/explain` slash command is installed at
+`~/.omp/agent/commands/explain.md`. Use `/explain src/example.py` to explain a
+file, symbol, change, or question, or `/explain` to explain the code or changes
+most recently discussed. It reads relevant code and explains it without editing
+files or running project code. Restart Oh My Pi after installation to load the
+command. The template uses Oh My Pi's
+[Markdown command format](https://github.com/can1357/oh-my-pi/blob/main/docs/slash-command-internals.md),
+including description frontmatter and `$ARGUMENTS` substitution.
+
 Each file uses a clearly marked `mattfeng-utils devcontainer config` block.
 Existing content outside that block is preserved, so any file can contain
 additional personal configuration. If a file has incomplete or duplicate
 markers, the command stops without changing any file.
+
+For the slash command, YAML frontmatter stays at the start of the file and is
+included in the merge baseline. An existing command without a managed block
+requires conflict review unless it exactly matches the bundled template.
 
 Each block also includes guidance comments and a versioned, base64-encoded copy
 of the last generated defaults. Keep these comments intact and commit them with
@@ -171,6 +184,7 @@ uvx --from git+https://github.com/mattfeng/utils \
 
 Use `--vim-config`, `--omp-config`, `--omp-keybindings`, or `--omp-system-prompt`
 to choose different destinations.
+Use `--omp-commands-dir` to choose the slash commands directory.
 
 ## Set up Docker Compose backend services
 
