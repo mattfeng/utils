@@ -7,7 +7,7 @@
 
 ## Minimalism
 
-- - When creating deep learning implementations, use JAX, equinox, einops, jaxtyping, beartype, optax, grain, tqdm, and trackio as the dependency stack. Try to minimize use of any other libraries.
+- When creating deep learning implementations, use JAX, equinox, einops, jaxtyping, beartype, optax, grain, tqdm, and trackio as the dependency stack. Try to minimize use of any other libraries.
 - Implementations should prioritize minimalism, readability, and hackability.
 
 ## Comments
